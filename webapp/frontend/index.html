@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRF Dashboard - Fast Search</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+    <style>
+        .filter-section {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .filter-section h5 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+        .search-btn {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 25px;
+            box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .search-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+        }
+        .results-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        .metric-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        .form-select:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        .header-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+        .filter-icon {
+            color: #007bff;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header-gradient">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-search"></i> MRF Dashboard - Fast Search</h1>
+                    <p class="mb-0">High-performance search using materialized views and indexing for instant results</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex justify-content-end gap-3">
+                        <select id="stateSelect" class="form-select" style="width: auto;">
+                            <option value="GA">Georgia (GA)</option>
+                            <option value="CA">California (CA)</option>
+                            <option value="NY">New York (NY)</option>
+                        </select>
+                        <select id="yearMonthSelect" class="form-select" style="width: auto;">
+                            <option value="2025-08">2025-08</option>
+                            <option value="2024-01">2024-01</option>
+                            <option value="2024-02">2024-02</option>
+                            <option value="2024-03">2024-03</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Data Explorer Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="filter-section">
+                    <h5><i class="fas fa-compass filter-icon"></i> Data Explorer - Discover What's Available</h5>
+                    <p class="text-muted mb-3">Explore your data to understand what's available before searching. Select a category to see what data exists and how much.</p>
+                    
+                    <!-- Category Selection -->
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Explore Category</label>
+                            <select class="form-select" id="exploreCategory">
+                                <option value="">Select a category to explore...</option>
+                                <option value="payer">Payer (Insurance Companies)</option>
+                                <option value="organization">Organization Name</option>
+                                <option value="taxonomy">Taxonomy Description</option>
+                                <option value="procedure_set">Procedure Set</option>
+                                <option value="procedure_class">Procedure Class</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Results per page</label>
+                            <select class="form-select" id="exploreLimit">
+                                <option value="10">Top 10</option>
+                                <option value="25" selected>Top 25</option>
+                                <option value="50">Top 50</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Explore Button -->
+                    <div class="text-center mb-3">
+                        <button class="btn btn-outline-primary" onclick="exploreData()">
+                            <i class="fas fa-search"></i> Explore Data
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" onclick="clearExploration()">
+                            <i class="fas fa-times"></i> Clear
+                        </button>
+                    </div>
+                    
+                    <!-- Category Statistics -->
+                    <div id="categoryStats" style="display: none;">
+                        <h6 class="text-primary">Data Overview</h6>
+                        <div class="row" id="statsRow">
+                            <!-- Stats will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Exploration Results -->
+                    <div id="explorationResults" style="display: none;">
+                        <h6 class="text-primary">Exploration Results</h6>
+                        
+                        <!-- Loading indicator -->
+                        <div id="explorationLoading" class="text-center" style="display: none;">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading exploration data...</p>
+                        </div>
+                        
+                        <!-- Results table -->
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="explorationTable">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Value</th>
+                                        <th>Records</th>
+                                        <th>Providers</th>
+                                        <th>Procedures</th>
+                                        <th>Avg Rate</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="explorationTableBody">
+                                    <!-- Results will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination controls -->
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <div>
+                                <button class="btn btn-outline-secondary btn-sm" id="prevPageBtn" onclick="loadPreviousPage()" disabled>
+                                    <i class="fas fa-chevron-left"></i> Previous
+                                </button>
+                                <span class="mx-3" id="pageInfo">Page 1</span>
+                                <button class="btn btn-outline-secondary btn-sm" id="nextPageBtn" onclick="loadNextPage()" disabled>
+                                    Next <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            <div>
+                                <small class="text-muted" id="resultCount">Showing 0 results</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Drill Down Results -->
+                    <div id="drillDownResults" style="display: none;">
+                        <h6 class="text-success">Drill Down Results</h6>
+                        <div class="alert alert-info">
+                            <strong>Drilling down from:</strong> <span id="drillSource"></span><br>
+                            <strong>Showing:</strong> <span id="drillTarget"></span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover" id="drillDownTable">
+                                <thead class="table-success">
+                                    <tr>
+                                        <th>Value</th>
+                                        <th>Records</th>
+                                        <th>Providers</th>
+                                        <th>Procedures</th>
+                                        <th>Avg Rate</th>
+                                        <th>Rate Range</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="drillDownTableBody">
+                                    <!-- Drill down results will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-outline-secondary" onclick="clearDrillDown()">
+                            <i class="fas fa-arrow-left"></i> Back to Main Results
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="row">
+            <div class="col-12">
+                <div class="filter-section">
+                    <h5><i class="fas fa-filter filter-icon"></i> Search Filters</h5>
+                    
+                    <!-- Provider Filters -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary"><i class="fas fa-user-md"></i> Provider Filters</h6>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Primary Taxonomy Description</label>
+                            <select class="form-select" id="primaryTaxonomyDesc" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Organization Name <small class="text-muted">(Searchable)</small></label>
+                            <select class="form-select" id="organizationName" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">NPI</label>
+                            <select class="form-select" id="npi" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Enumeration Type</label>
+                            <select class="form-select" id="enumerationType" multiple>
+                                <option value="1">Individual</option>
+                                <option value="2">Organization</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Procedure Filters -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary"><i class="fas fa-procedures"></i> Procedure Filters</h6>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Billing Class</label>
+                            <select class="form-select" id="billingClass" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Procedure Set</label>
+                            <select class="form-select" id="procSet" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Procedure Class</label>
+                            <select class="form-select" id="procClass" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Procedure Group</label>
+                            <select class="form-select" id="procGroup" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Additional Filters -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary"><i class="fas fa-building"></i> TIN & Payer Filters</h6>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Billing Code</label>
+                            <select class="form-select" id="billingCode" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">TIN Value</label>
+                            <select class="form-select" id="tinValue" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Payer Name</label>
+                            <select class="form-select" id="payer" multiple>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Search Button -->
+                    <div class="text-center">
+                        <button class="btn btn-primary search-btn" onclick="performSearch()">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <button class="btn btn-outline-secondary ms-2" onclick="clearFilters()">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </button>
+                        <button class="btn btn-outline-info ms-2" onclick="testAPI()">
+                            <i class="fas fa-bug"></i> Test API
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Searching with optimized queries...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-card" id="resultsSection" style="display: none;">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="fas fa-chart-bar"></i> Search Results</h5>
+            </div>
+            <div class="card-body">
+                <!-- Metrics -->
+                <div class="row mb-4" id="metricsRow">
+                    <!-- Metrics will be populated here -->
+                </div>
+
+                <!-- Results Table -->
+                <div class="table-container">
+                    <table class="table table-striped table-hover" id="resultsTable">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>NPI</th>
+                                <th>Organization</th>
+                                <th>Taxonomy</th>
+                                <th>Billing Code</th>
+                                <th>Procedure Class</th>
+                                <th>Rate</th>
+                                <th>Payer</th>
+                                <th>TIN</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsTableBody">
+                            <!-- Results will be populated here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- No Results Message -->
+        <div class="alert alert-info alert-custom" id="noResultsMessage" style="display: none;">
+            <i class="fas fa-info-circle"></i> No results found for the specified criteria.
+        </div>
+
+        <!-- Error Message -->
+        <div class="alert alert-danger alert-custom" id="errorMessage" style="display: none;">
+            <i class="fas fa-exclamation-triangle"></i> <span id="errorText"></span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let filterCache = {};
+        let select2Instances = {};
+
+        // Initialize the dashboard
+        $(document).ready(function() {
+            initializeSelect2();
+            loadFilterOptions();
+            loadUserPreferences();
+        });
+
+        function initializeSelect2() {
+            const selectFields = [
+                'primaryTaxonomyDesc', 'organizationName', 'npi', 'enumerationType',
+                'billingClass', 'procSet', 'procClass', 'procGroup',
+                'billingCode', 'tinValue', 'payer'
+            ];
+
+            selectFields.forEach(fieldId => {
+                const $select = $(`#${fieldId}`);
+                select2Instances[fieldId] = $select.select2({
+                    theme: 'bootstrap-5',
+                    placeholder: 'Select options...',
+                    allowClear: true,
+                    width: '100%',
+                    dropdownParent: $select.parent(),
+                    language: {
+                        noResults: function() {
+                            return "No results found";
+                        },
+                        searching: function() {
+                            return "Searching...";
+                        }
+                    }
+                });
+            });
+        }
+
+        function loadFilterOptions() {
+            const currentState = $('#stateSelect').val();
+            const currentYearMonth = $('#yearMonthSelect').val();
+            
+            // Load options for each filter field
+            const filterFields = [
+                'primary_taxonomy_desc', 'organization_name', 'npi',
+                'billing_class', 'proc_set', 'proc_class', 'proc_group',
+                'billing_code', 'tin_value', 'payer'
+            ];
+
+            filterFields.forEach(field => {
+                loadFilterOptionsForField(field, currentState, currentYearMonth);
+            });
+        }
+
+        function loadFilterOptionsForField(field, state, yearMonth) {
+            const cacheKey = `${field}_${state}_${yearMonth}`;
+            
+            console.log(`Loading options for ${field} (${state}/${yearMonth})`);
+            
+            // Check cache first
+            if (filterCache[cacheKey]) {
+                console.log(`Using cached data for ${field}: ${filterCache[cacheKey].length} options`);
+                populateSelectField(field, filterCache[cacheKey]);
+                return;
+            }
+
+            // Fetch from API
+            const url = `${API_BASE_URL}/api/autocomplete/${field}?state=${state}&year_month=${yearMonth}&query=&limit=1000`;
+            console.log(`Fetching from: ${url}`);
+            
+            fetch(url)
+                .then(response => {
+                    console.log(`Response for ${field}:`, response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log(`Data for ${field}:`, data);
+                    if (data.suggestions) {
+                        filterCache[cacheKey] = data.suggestions;
+                        populateSelectField(field, data.suggestions);
+                    } else {
+                        console.warn(`No suggestions in response for ${field}`);
+                    }
+                })
+                .catch(error => {
+                    console.error(`Error loading ${field} options:`, error);
+                });
+        }
+
+        function populateSelectField(field, options) {
+            // Map API field names to HTML element IDs
+            const fieldMapping = {
+                'primary_taxonomy_desc': 'primaryTaxonomyDesc',
+                'organization_name': 'organizationName',
+                'npi': 'npi',
+                'billing_class': 'billingClass',
+                'proc_set': 'procSet',
+                'proc_class': 'procClass',
+                'proc_group': 'procGroup',
+                'billing_code': 'billingCode',
+                'tin_value': 'tinValue',
+                'payer': 'payer'
+            };
+            
+            const fieldId = fieldMapping[field] || field;
+            const $select = $(`#${fieldId}`);
+            
+            console.log(`Populating ${field} -> ${fieldId} with ${options.length} options`);
+            
+            // Clear existing options
+            $select.empty();
+            
+            // Add options
+            options.forEach(option => {
+                $select.append(new Option(option, option));
+            });
+            
+            // Trigger Select2 update
+            $select.trigger('change');
+        }
+
+        function performSearch() {
+            // Show loading indicator
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('noResultsMessage').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+
+            // Collect form data
+            const searchParams = {
+                state: document.getElementById('stateSelect').value,
+                year_month: document.getElementById('yearMonthSelect').value,
+                limit: 200
+            };
+
+            // Add selected filter values
+            const filters = [
+                'primaryTaxonomyDesc', 'organizationName', 'npi', 'enumerationType',
+                'billingClass', 'procSet', 'procClass', 'procGroup',
+                'billingCode', 'tinValue', 'payer'
+            ];
+
+            filters.forEach(filterId => {
+                const values = $(`#${filterId}`).val();
+                if (values && values.length > 0) {
+                    // Convert to API parameter names
+                    const apiParam = filterId.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
+                    searchParams[apiParam] = values.join(',');
+                }
+            });
+
+            // Save user preferences
+            saveUserPreferences();
+
+            // Make API call
+            fetch(`${API_BASE_URL}/api/search/multi-field?${new URLSearchParams(searchParams)}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    
+                    if (data.results && data.results.length > 0) {
+                        displayResults(data);
+                    } else {
+                        document.getElementById('noResultsMessage').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('loadingIndicator').style.display = 'none';
+                    document.getElementById('errorText').textContent = `Error: ${error.message}`;
+                    document.getElementById('errorMessage').style.display = 'block';
+                });
+        }
+
+        function displayResults(data) {
+            // Show results section
+            document.getElementById('resultsSection').style.display = 'block';
+
+            // Update metrics
+            updateMetrics(data);
+
+            // Update table
+            updateTable(data.results);
+        }
+
+        function updateMetrics(data) {
+            const results = data.results;
+            const metricsRow = document.getElementById('metricsRow');
+            
+            // Calculate metrics
+            const totalResults = results.length;
+            const avgRate = results.reduce((sum, r) => sum + (r.negotiated_rate || 0), 0) / totalResults;
+            const uniqueOrgs = new Set(results.map(r => r.organization_name).filter(Boolean)).size;
+            const uniqueCodes = new Set(results.map(r => r.code).filter(Boolean)).size;
+
+            metricsRow.innerHTML = `
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value">${totalResults.toLocaleString()}</div>
+                        <div class="metric-label">Total Results</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value">$${avgRate.toFixed(2)}</div>
+                        <div class="metric-label">Average Rate</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value">${uniqueOrgs}</div>
+                        <div class="metric-label">Unique Organizations</div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="metric-card">
+                        <div class="metric-value">${uniqueCodes}</div>
+                        <div class="metric-label">Unique Codes</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateTable(results) {
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+
+            results.forEach(result => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${result.npi || '-'}</td>
+                    <td>${result.organization_name || '-'}</td>
+                    <td>${result.primary_taxonomy_desc || '-'}</td>
+                    <td>${result.code || '-'}</td>
+                    <td>${result.proc_class || '-'}</td>
+                    <td>$${(result.negotiated_rate || 0).toFixed(2)}</td>
+                    <td>${result.reporting_entity_name || '-'}</td>
+                    <td>${result.tin_value || '-'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function clearFilters() {
+            // Clear all Select2 instances
+            Object.values(select2Instances).forEach(select2 => {
+                select2.val(null).trigger('change');
+            });
+            
+            // Clear results
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('noResultsMessage').style.display = 'none';
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            // Clear user preferences
+            localStorage.removeItem('mrf_dashboard_preferences');
+        }
+
+        function saveUserPreferences() {
+            const preferences = {
+                state: $('#stateSelect').val(),
+                yearMonth: $('#yearMonthSelect').val(),
+                filters: {}
+            };
+
+            // Save filter selections
+            const filterFields = [
+                'primaryTaxonomyDesc', 'organizationName', 'npi', 'enumerationType',
+                'billingClass', 'procSet', 'procClass', 'procGroup',
+                'billingCode', 'tinValue', 'payer'
+            ];
+
+            filterFields.forEach(fieldId => {
+                const values = $(`#${fieldId}`).val();
+                if (values && values.length > 0) {
+                    preferences.filters[fieldId] = values;
+                }
+            });
+
+            localStorage.setItem('mrf_dashboard_preferences', JSON.stringify(preferences));
+        }
+
+        function loadUserPreferences() {
+            const saved = localStorage.getItem('mrf_dashboard_preferences');
+            if (saved) {
+                try {
+                    const preferences = JSON.parse(saved);
+                    
+                    // Restore state and year/month
+                    if (preferences.state) {
+                        $('#stateSelect').val(preferences.state);
+                    }
+                    if (preferences.yearMonth) {
+                        $('#yearMonthSelect').val(preferences.yearMonth);
+                    }
+
+                    // Restore filter selections after options are loaded
+                    setTimeout(() => {
+                        if (preferences.filters) {
+                            Object.entries(preferences.filters).forEach(([fieldId, values]) => {
+                                $(`#${fieldId}`).val(values).trigger('change');
+                            });
+                        }
+                    }, 1000);
+                } catch (e) {
+                    console.error('Error loading preferences:', e);
+                }
+            }
+        }
+
+        // Handle state/year-month changes
+        $('#stateSelect, #yearMonthSelect').on('change', function() {
+            loadFilterOptions();
+        });
+
+        function testAPI() {
+            console.log("🧪 Testing API...");
+            const state = $('#stateSelect').val();
+            const yearMonth = $('#yearMonthSelect').val();
+            
+            // Test proc_class which we know works
+            fetch(`${API_BASE_URL}/api/autocomplete/proc_class?state=${state}&year_month=${yearMonth}&query=&limit=5`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("✅ API Test Result:", data);
+                    alert(`API Test: Found ${data.suggestions.length} procedure classes. Check console for details.`);
+                })
+                .catch(error => {
+                    console.error("❌ API Test Error:", error);
+                    alert(`API Test Failed: ${error.message}`);
+                });
+        }
+
+        // Allow Enter key to trigger search
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // =============================================================================
+        // DATA EXPLORATION FUNCTIONS
+        // =============================================================================
+
+        // Global variables for pagination
+        let currentPage = 0;
+        let currentCategory = '';
+        let currentLimit = 25;
+        let hasMoreResults = false;
+
+        function exploreData() {
+            const category = document.getElementById('exploreCategory').value;
+            const limit = parseInt(document.getElementById('exploreLimit').value);
+            
+            if (!category) {
+                alert('Please select a category to explore.');
+                return;
+            }
+            
+            // Reset pagination
+            currentPage = 0;
+            currentCategory = category;
+            currentLimit = limit;
+            
+            // Show loading
+            showExplorationLoading();
+            
+            const state = document.getElementById('stateSelect').value;
+            const yearMonth = document.getElementById('yearMonthSelect').value;
+            
+            // First, get category statistics (lightweight)
+            fetch(`${API_BASE_URL}/api/explore/category-stats?state=${state}&year_month=${yearMonth}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayCategoryStats(data.category_statistics);
+                    
+                    // Then get exploration data with pagination
+                    return loadExplorationPage(state, yearMonth, category, limit, 0);
+                })
+                .catch(error => {
+                    console.error('Error exploring data:', error);
+                    alert('Error exploring data: ' + error.message);
+                })
+                .finally(() => {
+                    hideExplorationLoading();
+                });
+        }
+
+        function loadExplorationPage(state, yearMonth, category, limit, offset) {
+            return fetch(`${API_BASE_URL}/api/explore/data-availability?state=${state}&year_month=${yearMonth}&category=${category}&limit=${limit}&offset=${offset}`)
+                .then(response => response.json())
+                .then(data => {
+                    hasMoreResults = data.has_more;
+                    displayExplorationResults(data);
+                    updatePaginationControls();
+                });
+        }
+
+        function loadNextPage() {
+            if (!hasMoreResults) return;
+            
+            currentPage++;
+            const state = document.getElementById('stateSelect').value;
+            const yearMonth = document.getElementById('yearMonthSelect').value;
+            
+            showExplorationLoading();
+            loadExplorationPage(state, yearMonth, currentCategory, currentLimit, currentPage * currentLimit)
+                .finally(() => hideExplorationLoading());
+        }
+
+        function loadPreviousPage() {
+            if (currentPage <= 0) return;
+            
+            currentPage--;
+            const state = document.getElementById('stateSelect').value;
+            const yearMonth = document.getElementById('yearMonthSelect').value;
+            
+            showExplorationLoading();
+            loadExplorationPage(state, yearMonth, currentCategory, currentLimit, currentPage * currentLimit)
+                .finally(() => hideExplorationLoading());
+        }
+
+        function updatePaginationControls() {
+            const prevBtn = document.getElementById('prevPageBtn');
+            const nextBtn = document.getElementById('nextPageBtn');
+            const pageInfo = document.getElementById('pageInfo');
+            
+            prevBtn.disabled = currentPage <= 0;
+            nextBtn.disabled = !hasMoreResults;
+            pageInfo.textContent = `Page ${currentPage + 1}`;
+        }
+
+        function showExplorationLoading() {
+            document.getElementById('explorationLoading').style.display = 'block';
+            document.getElementById('explorationTable').style.display = 'none';
+        }
+
+        function hideExplorationLoading() {
+            document.getElementById('explorationLoading').style.display = 'none';
+            document.getElementById('explorationTable').style.display = 'table';
+        }
+
+        function displayCategoryStats(stats) {
+            const statsRow = document.getElementById('statsRow');
+            const categoryStats = document.getElementById('categoryStats');
+            
+            // Show the most relevant categories
+            const relevantCategories = ['payer', 'organization', 'taxonomy', 'procedure_set', 'procedure_class'];
+            
+            statsRow.innerHTML = relevantCategories.map(cat => {
+                const stat = stats[cat];
+                return `
+                    <div class="col-md-2">
+                        <div class="metric-card" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                            <div class="metric-value">${stat.count.toLocaleString()}</div>
+                            <div class="metric-label">${stat.label}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            categoryStats.style.display = 'block';
+        }
+
+        function displayExplorationResults(data) {
+            const results = data.results;
+            const tbody = document.getElementById('explorationTableBody');
+            const explorationResults = document.getElementById('explorationResults');
+            const resultCount = document.getElementById('resultCount');
+            
+            // Clear existing results
+            tbody.innerHTML = '';
+            
+            // Build table rows efficiently
+            const rows = results.map(result => {
+                const escapedValue = result.value.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                return `
+                    <tr>
+                        <td><strong>${result.value}</strong></td>
+                        <td>${result.record_count.toLocaleString()}</td>
+                        <td>${result.unique_providers.toLocaleString()}</td>
+                        <td>${result.unique_procedures.toLocaleString()}</td>
+                        <td>$${result.avg_rate.toFixed(2)}</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="drillDown('${data.category}', '${escapedValue}')">
+                                <i class="fas fa-search-plus"></i> Drill Down
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            
+            tbody.innerHTML = rows;
+            
+            // Update result count
+            resultCount.textContent = `Showing ${results.length} results`;
+            
+            explorationResults.style.display = 'block';
+        }
+
+        function drillDown(sourceCategory, selectedValue) {
+            const state = document.getElementById('stateSelect').value;
+            const yearMonth = document.getElementById('yearMonthSelect').value;
+            
+            // Show drill down options
+            const drillCategories = {
+                'payer': ['organization', 'taxonomy', 'procedure_set', 'procedure_class'],
+                'organization': ['payer', 'taxonomy', 'procedure_set', 'procedure_class'],
+                'taxonomy': ['payer', 'organization', 'procedure_set', 'procedure_class'],
+                'procedure_set': ['payer', 'organization', 'taxonomy', 'procedure_class'],
+                'procedure_class': ['payer', 'organization', 'taxonomy', 'procedure_set']
+            };
+            
+            const availableDrills = drillCategories[sourceCategory] || [];
+            
+            if (availableDrills.length === 0) {
+                alert('No drill down options available for this category.');
+                return;
+            }
+            
+            // For now, let's drill down to the first available category
+            // In a more advanced version, you could show a modal to let users choose
+            const drillCategory = availableDrills[0];
+            
+            fetch(`${API_BASE_URL}/api/explore/drill-down?state=${state}&year_month=${yearMonth}&category=${sourceCategory}&selected_value=${encodeURIComponent(selectedValue)}&drill_category=${drillCategory}&limit=25`)
+                .then(response => response.json())
+                .then(data => {
+                    displayDrillDownResults(data, sourceCategory, selectedValue, drillCategory);
+                })
+                .catch(error => {
+                    console.error('Error drilling down:', error);
+                    alert('Error drilling down: ' + error.message);
+                });
+        }
+
+        function displayDrillDownResults(data, sourceCategory, selectedValue, drillCategory) {
+            const tbody = document.getElementById('drillDownTableBody');
+            const drillDownResults = document.getElementById('drillDownResults');
+            const drillSource = document.getElementById('drillSource');
+            const drillTarget = document.getElementById('drillTarget');
+            
+            // Update headers
+            drillSource.textContent = `${sourceCategory}: ${selectedValue}`;
+            drillTarget.textContent = drillCategory;
+            
+            tbody.innerHTML = '';
+            
+            data.results.forEach(result => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><strong>${result.value}</strong></td>
+                    <td>${result.record_count.toLocaleString()}</td>
+                    <td>${result.unique_providers.toLocaleString()}</td>
+                    <td>${result.unique_procedures.toLocaleString()}</td>
+                    <td>$${result.avg_rate.toFixed(2)}</td>
+                    <td>$${result.min_rate.toFixed(2)} - $${result.max_rate.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // Hide main results and show drill down
+            document.getElementById('explorationResults').style.display = 'none';
+            drillDownResults.style.display = 'block';
+        }
+
+        function clearExploration() {
+            document.getElementById('exploreCategory').value = '';
+            document.getElementById('exploreLimit').value = '50';
+            document.getElementById('categoryStats').style.display = 'none';
+            document.getElementById('explorationResults').style.display = 'none';
+            document.getElementById('drillDownResults').style.display = 'none';
+        }
+
+        function clearDrillDown() {
+            document.getElementById('drillDownResults').style.display = 'none';
+            document.getElementById('explorationResults').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
