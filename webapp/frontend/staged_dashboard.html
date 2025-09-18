@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MRF Staged Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+        }
+
+        .header-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .stage-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .stage-card.active {
+            border-left: 5px solid var(--primary-color);
+            box-shadow: 0 8px 30px rgba(0,123,255,0.15);
+        }
+
+        .stage-card.completed {
+            border-left: 5px solid var(--success-color);
+            opacity: 0.8;
+        }
+
+        .stage-number {
+            background: var(--primary-color);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 15px;
+        }
+
+        .stage-number.completed {
+            background: var(--success-color);
+        }
+
+        .option-card {
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .option-card:hover {
+            border-color: var(--primary-color);
+            background-color: #f8f9fa;
+        }
+
+        .option-card.selected {
+            border-color: var(--primary-color);
+            background-color: #e3f2fd;
+        }
+
+        .option-card input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            border: none;
+            padding: 12px 30px;
+            font-weight: 600;
+            border-radius: 25px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
+        }
+
+        .results-table {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+
+        .progress-bar {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+
+        .filter-summary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header-gradient">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-filter"></i> MRF Staged Dashboard</h1>
+                    <p class="mb-0">Step-by-step filtering to prevent over-filtering</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex justify-content-end gap-3">
+                        <select id="stateSelect" class="form-select" style="width: auto;">
+                            <option value="GA">Georgia (GA)</option>
+                            <option value="CA">California (CA)</option>
+                            <option value="NY">New York (NY)</option>
+                        </select>
+                        <select id="yearMonthSelect" class="form-select" style="width: auto;">
+                            <option value="2025-08">2025-08</option>
+                            <option value="2024-01">2024-01</option>
+                            <option value="2024-02">2024-02</option>
+                            <option value="2024-03">2024-03</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Progress Bar -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="progress" style="height: 8px;">
+                    <div class="progress-bar" id="progressBar" role="progressbar" style="width: 0%"></div>
+                </div>
+                <small class="text-muted mt-2 d-block">Step <span id="currentStep">1</span> of 6</small>
+            </div>
+        </div>
+
+        <!-- Filter Summary -->
+        <div class="filter-summary" id="filterSummary" style="display: none;">
+            <h6><i class="fas fa-check-circle"></i> Current Filters</h6>
+            <div id="filterSummaryContent"></div>
+        </div>
+
+        <!-- Single Stage View -->
+        <div class="stage-card active" id="currentStage">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="stage-number" id="stageNumber">1</div>
+                    <div>
+                        <h5 class="mb-1" id="stageTitle">Select Billing Class</h5>
+                        <p class="text-muted mb-0" id="stageDescription">What type of billing are you looking for?</p>
+                    </div>
+                </div>
+                <div id="stageOptions">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading billing classes...</p>
+                    </div>
+                </div>
+                <div class="text-end mt-3">
+                    <button class="btn btn-outline-secondary me-2" onclick="previousStage()" id="prevButton" style="display: none;">
+                        <i class="fas fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" onclick="nextStage()" id="nextButton" disabled>
+                        Next <i class="fas fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-3">Loading data...</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE_URL = window.location.origin;
+        let currentStage = 1;
+        let selectedFilters = {
+            state: 'GA',
+            yearMonth: '2025-08',
+            billingClass: null,
+            payers: [],
+            procSet: null,
+            procClass: null,
+            taxonomies: []
+        };
+
+        // Initialize the dashboard
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStage1();
+        });
+
+        function showLoading() {
+            document.getElementById('loadingIndicator').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingIndicator').style.display = 'none';
+        }
+
+        function updateProgress() {
+            const progress = (currentStage / 6) * 100;
+            document.getElementById('progressBar').style.width = progress + '%';
+            document.getElementById('currentStep').textContent = currentStage;
+        }
+
+        function updateFilterSummary() {
+            const summary = document.getElementById('filterSummary');
+            const content = document.getElementById('filterSummaryContent');
+            
+            let summaryText = '';
+            if (selectedFilters.billingClass) {
+                summaryText += `<strong>Billing Class:</strong> ${selectedFilters.billingClass}<br>`;
+            }
+            if (selectedFilters.payers.length > 0) {
+                summaryText += `<strong>Payers:</strong> ${selectedFilters.payers.join(', ')}<br>`;
+            }
+            if (selectedFilters.procSet) {
+                summaryText += `<strong>Procedure Set:</strong> ${selectedFilters.procSet}<br>`;
+            }
+            if (selectedFilters.procClass) {
+                summaryText += `<strong>Procedure Class:</strong> ${selectedFilters.procClass}<br>`;
+            }
+            if (selectedFilters.taxonomies.length > 0) {
+                summaryText += `<strong>Taxonomies:</strong> ${selectedFilters.taxonomies.join(', ')}<br>`;
+            }
+            
+            if (summaryText) {
+                content.innerHTML = summaryText;
+                summary.style.display = 'block';
+            } else {
+                summary.style.display = 'none';
+            }
+        }
+
+        async function loadStage1() {
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/stage1/billing-classes?state=${selectedFilters.state}&year_month=${selectedFilters.yearMonth}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('stageOptions');
+                container.innerHTML = data.options.map(option => `
+                    <div class="option-card" onclick="selectBillingClass('${option.value}')">
+                        <input type="radio" name="billingClass" value="${option.value}" id="billing_${option.value}">
+                        <label for="billing_${option.value}" class="w-100">
+                            <strong>${option.label}</strong>
+                            <span class="badge bg-secondary ms-2">${option.count} records</span>
+                        </label>
+                    </div>
+                `).join('');
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading stage 1:', error);
+                hideLoading();
+            }
+        }
+
+        function selectBillingClass(billingClass) {
+            selectedFilters.billingClass = billingClass;
+            document.getElementById('nextButton').disabled = false;
+            updateFilterSummary();
+        }
+
+        async function loadStage2() {
+            if (!selectedFilters.billingClass) return;
+            
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/stage2/payers?state=${selectedFilters.state}&year_month=${selectedFilters.yearMonth}&billing_class=${selectedFilters.billingClass}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('stageOptions');
+                container.innerHTML = data.options.map(option => `
+                    <div class="option-card">
+                        <input type="checkbox" name="payers" value="${option.value}" id="payer_${option.value.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        <label for="payer_${option.value.replace(/[^a-zA-Z0-9]/g, '_')}" class="w-100">
+                            <strong>${option.label}</strong>
+                            <span class="badge bg-secondary ms-2">${option.count} records</span>
+                        </label>
+                    </div>
+                `).join('');
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading stage 2:', error);
+                hideLoading();
+            }
+        }
+
+        function nextStage() {
+            if (currentStage < 6) {
+                currentStage++;
+                updateStageView();
+                updateProgress();
+                
+                // Load next stage data
+                if (currentStage === 2) {
+                    loadStage2();
+                } else if (currentStage === 3) {
+                    loadStage3();
+                } else if (currentStage === 4) {
+                    loadStage4();
+                } else if (currentStage === 5) {
+                    loadStage5();
+                } else if (currentStage === 6) {
+                    loadStage6();
+                }
+            } else if (currentStage === 6) {
+                // Load results when on stage 6
+                loadResults();
+            }
+        }
+
+        function previousStage() {
+            if (currentStage > 1) {
+                currentStage--;
+                updateStageView();
+                updateProgress();
+                
+                // Reload current stage data
+                if (currentStage === 1) {
+                    loadStage1();
+                } else if (currentStage === 2) {
+                    loadStage2();
+                } else if (currentStage === 3) {
+                    loadStage3();
+                } else if (currentStage === 4) {
+                    loadStage4();
+                } else if (currentStage === 5) {
+                    loadStage5();
+                }
+            }
+        }
+
+        function updateStageView() {
+            const stageNumber = document.getElementById('stageNumber');
+            const stageTitle = document.getElementById('stageTitle');
+            const stageDescription = document.getElementById('stageDescription');
+            const prevButton = document.getElementById('prevButton');
+            const nextButton = document.getElementById('nextButton');
+            
+            // Show/hide previous button
+            prevButton.style.display = currentStage > 1 ? 'inline-block' : 'none';
+            
+            // Update stage content
+            const stages = {
+                1: {
+                    title: "Select Billing Class",
+                    description: "What type of billing are you looking for?",
+                    nextText: "Next"
+                },
+                2: {
+                    title: "Select Payer(s)",
+                    description: "Which payers have data for your selected billing class?",
+                    nextText: "Next"
+                },
+                3: {
+                    title: "Select Procedure Set (Optional)",
+                    description: "What type of procedures are you interested in?",
+                    nextText: "Next"
+                },
+                4: {
+                    title: "Select Procedure Class (Optional)",
+                    description: "What specific procedure category?",
+                    nextText: "Next"
+                },
+                5: {
+                    title: "Select Taxonomy (Optional)",
+                    description: "What provider specialties are you interested in?",
+                    nextText: "Next"
+                },
+                6: {
+                    title: "View Results",
+                    description: "Your filtered results are ready!",
+                    nextText: "Load Results"
+                }
+            };
+            
+            const stage = stages[currentStage];
+            stageNumber.textContent = currentStage;
+            stageTitle.textContent = stage.title;
+            stageDescription.textContent = stage.description;
+            nextButton.innerHTML = `${stage.nextText} <i class="fas fa-arrow-right"></i>`;
+            
+            // Reset options area
+            document.getElementById('stageOptions').innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading...</p></div>';
+        }
+
+        // Add event listeners for all form inputs
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'payers') {
+                const selectedPayers = Array.from(document.querySelectorAll('input[name="payers"]:checked'))
+                    .map(input => input.value);
+                selectedFilters.payers = selectedPayers;
+                document.getElementById('nextButton').disabled = selectedPayers.length === 0;
+                updateFilterSummary();
+            } else if (e.target.name === 'taxonomies') {
+                const selectedTaxonomies = Array.from(document.querySelectorAll('input[name="taxonomies"]:checked'))
+                    .map(input => input.value);
+                selectedFilters.taxonomies = selectedTaxonomies;
+                updateFilterSummary();
+            }
+        });
+
+        async function loadStage3() {
+            if (!selectedFilters.billingClass || selectedFilters.payers.length === 0) return;
+            
+            showLoading();
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/stage3/procedure-sets?state=${selectedFilters.state}&year_month=${selectedFilters.yearMonth}&billing_class=${selectedFilters.billingClass}&payers=${selectedFilters.payers.join(',')}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('stageOptions');
+                container.innerHTML = data.options.map(option => `
+                    <div class="option-card" onclick="selectProcSet('${option.value}')">
+                        <input type="radio" name="procSet" value="${option.value}" id="procset_${option.value.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        <label for="procset_${option.value.replace(/[^a-zA-Z0-9]/g, '_')}" class="w-100">
+                            <strong>${option.label}</strong>
+                            <span class="badge bg-secondary ms-2">${option.count} records</span>
+                        </label>
+                    </div>
+                `).join('');
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading stage 3:', error);
+                hideLoading();
+            }
+        }
+
+        function selectProcSet(procSet) {
+            selectedFilters.procSet = procSet;
+            updateFilterSummary();
+        }
+
+        async function loadStage4() {
+            if (!selectedFilters.billingClass || selectedFilters.payers.length === 0) return;
+            
+            showLoading();
+            try {
+                const params = new URLSearchParams({
+                    state: selectedFilters.state,
+                    year_month: selectedFilters.yearMonth,
+                    billing_class: selectedFilters.billingClass,
+                    payers: selectedFilters.payers.join(',')
+                });
+                if (selectedFilters.procSet) params.append('proc_set', selectedFilters.procSet);
+                
+                const response = await fetch(`${API_BASE_URL}/api/stage4/procedure-classes?${params}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('stageOptions');
+                container.innerHTML = data.options.map(option => `
+                    <div class="option-card" onclick="selectProcClass('${option.value}')">
+                        <input type="radio" name="procClass" value="${option.value}" id="procclass_${option.value.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        <label for="procclass_${option.value.replace(/[^a-zA-Z0-9]/g, '_')}" class="w-100">
+                            <strong>${option.label}</strong>
+                            <span class="badge bg-secondary ms-2">${option.count} records</span>
+                        </label>
+                    </div>
+                `).join('');
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading stage 4:', error);
+                hideLoading();
+            }
+        }
+
+        function selectProcClass(procClass) {
+            selectedFilters.procClass = procClass;
+            updateFilterSummary();
+        }
+
+        async function loadStage5() {
+            if (!selectedFilters.billingClass || selectedFilters.payers.length === 0) return;
+            
+            showLoading();
+            try {
+                const params = new URLSearchParams({
+                    state: selectedFilters.state,
+                    year_month: selectedFilters.yearMonth,
+                    billing_class: selectedFilters.billingClass,
+                    payers: selectedFilters.payers.join(',')
+                });
+                if (selectedFilters.procSet) params.append('proc_set', selectedFilters.procSet);
+                if (selectedFilters.procClass) params.append('proc_class', selectedFilters.procClass);
+                
+                const response = await fetch(`${API_BASE_URL}/api/stage5/taxonomies?${params}`);
+                const data = await response.json();
+                
+                const container = document.getElementById('stageOptions');
+                container.innerHTML = data.options.map(option => `
+                    <div class="option-card">
+                        <input type="checkbox" name="taxonomies" value="${option.value}" id="tax_${option.value.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        <label for="tax_${option.value.replace(/[^a-zA-Z0-9]/g, '_')}" class="w-100">
+                            <strong>${option.label}</strong>
+                            <span class="badge bg-secondary ms-2">${option.count} records</span>
+                        </label>
+                    </div>
+                `).join('');
+                
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading stage 5:', error);
+                hideLoading();
+            }
+        }
+
+        async function loadStage6() {
+            const container = document.getElementById('stageOptions');
+            container.innerHTML = `
+                <div class="text-center">
+                    <h6>Ready to view results!</h6>
+                    <p class="text-muted">Click "Load Results" to see your filtered data.</p>
+                </div>
+            `;
+        }
+
+        async function loadResults() {
+            showLoading();
+            try {
+                const params = new URLSearchParams({
+                    state: selectedFilters.state,
+                    year_month: selectedFilters.yearMonth,
+                    billing_class: selectedFilters.billingClass,
+                    payers: selectedFilters.payers.join(','),
+                    limit: 100
+                });
+                
+                if (selectedFilters.procSet) params.append('proc_set', selectedFilters.procSet);
+                if (selectedFilters.procClass) params.append('proc_class', selectedFilters.procClass);
+                if (selectedFilters.taxonomies.length > 0) params.append('taxonomies', selectedFilters.taxonomies.join(','));
+                
+                const response = await fetch(`${API_BASE_URL}/api/results?${params}`);
+                const data = await response.json();
+                
+                displayResults(data);
+                hideLoading();
+            } catch (error) {
+                console.error('Error loading results:', error);
+                hideLoading();
+            }
+        }
+
+        function displayResults(data) {
+            const container = document.getElementById('stageOptions');
+            container.innerHTML = `
+                <h6>Found ${data.total_results} results</h6>
+                <div class="results-table">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Rate</th>
+                                <th>Payer</th>
+                                <th>Organization</th>
+                                <th>Taxonomy</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.results.map(result => `
+                                <tr>
+                                    <td>${result.code}</td>
+                                    <td>$${result.negotiated_rate}</td>
+                                    <td>${result.payer}</td>
+                                    <td>${result.organization_name || '-'}</td>
+                                    <td>${result.taxonomy || '-'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>

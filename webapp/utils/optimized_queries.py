@@ -20,8 +20,13 @@ class OptimizedMRFQueries:
     
     def __init__(self):
         self.conn = duckdb.connect()
-        self._create_materialized_views()
-        self._create_indexes()
+        # Set conservative memory limits to prevent crashes
+        self.conn.execute("SET memory_limit='512MB'")
+        self.conn.execute("SET max_memory='512MB'")
+        self.conn.execute("SET threads=2")  # Limit threads to reduce memory usage
+        # Skip materialized views for now to prevent memory issues
+        # self._create_materialized_views()
+        # self._create_indexes()
     
     def __del__(self):
         if hasattr(self, 'conn'):
@@ -30,69 +35,85 @@ class OptimizedMRFQueries:
     def _create_materialized_views(self):
         """Create materialized views for fast lookups"""
         
-        # Provider search index with full-text search capabilities
-        self.conn.execute("""
-        CREATE OR REPLACE VIEW provider_search_index AS
-        SELECT 
-            n.npi,
-            n.organization_name,
-            n.first_name,
-            n.last_name,
-            n.primary_taxonomy_desc,
-            n.status,
-            n.enumeration_type,
-            n.credential,
-            na.city,
-            na.state,
-            na.postal_code,
-            na.address_1,
-            na.telephone_number,
-            -- Pre-computed search fields for fast text search
-            LOWER(CONCAT_WS(' ', 
-                COALESCE(n.organization_name, ''), 
-                COALESCE(n.first_name, ''), 
-                COALESCE(n.last_name, ''),
-                COALESCE(n.primary_taxonomy_desc, '')
-            )) as search_text,
-            -- Normalized organization name for exact matching
-            LOWER(TRIM(COALESCE(n.organization_name, ''))) as org_name_normalized,
-            -- Normalized taxonomy for exact matching
-            LOWER(TRIM(COALESCE(n.primary_taxonomy_desc, ''))) as taxonomy_normalized
-        FROM read_parquet('""" + str(DATA_ROOT / "dims/dim_npi.parquet") + """') n
-        LEFT JOIN read_parquet('""" + str(DATA_ROOT / "dims/dim_npi_address.parquet") + """') na 
-            ON n.npi = na.npi AND na.address_purpose = 'LOCATION'
-        """)
+        try:
+            # Check if data files exist before creating views
+            npi_file = DATA_ROOT / "dims/dim_npi.parquet"
+            npi_addr_file = DATA_ROOT / "dims/dim_npi_address.parquet"
+            fact_file = DATA_ROOT / "gold/fact_rate.parquet"
+            
+            if not npi_file.exists():
+                print(f"Warning: {npi_file} not found, skipping materialized view creation")
+                return
+                
+            # Provider search index with full-text search capabilities
+            self.conn.execute("""
+            CREATE OR REPLACE VIEW provider_search_index AS
+            SELECT 
+                n.npi,
+                n.organization_name,
+                n.first_name,
+                n.last_name,
+                n.primary_taxonomy_desc,
+                n.status,
+                n.enumeration_type,
+                n.credential,
+                na.city,
+                na.state,
+                na.postal_code,
+                na.address_1,
+                na.telephone_number,
+                -- Pre-computed search fields for fast text search
+                LOWER(CONCAT_WS(' ', 
+                    COALESCE(n.organization_name, ''), 
+                    COALESCE(n.first_name, ''), 
+                    COALESCE(n.last_name, ''),
+                    COALESCE(n.primary_taxonomy_desc, '')
+                )) as search_text,
+                -- Normalized organization name for exact matching
+                LOWER(TRIM(COALESCE(n.organization_name, ''))) as org_name_normalized,
+                -- Normalized taxonomy for exact matching
+                LOWER(TRIM(COALESCE(n.primary_taxonomy_desc, ''))) as taxonomy_normalized
+            FROM read_parquet('""" + str(npi_file) + """') n
+            LEFT JOIN read_parquet('""" + str(npi_addr_file) + """') na 
+                ON n.npi = na.npi AND na.address_purpose = 'LOCATION'
+            """)
+        except Exception as e:
+            print(f"Error creating provider_search_index: {e}")
+            return
         
-        # TIN-based provider index for fast TIN lookups
-        self.conn.execute("""
-        CREATE OR REPLACE VIEW tin_provider_index AS
-        SELECT 
-            xt.tin_value,
-            xt.tin_type,
-            xt.pg_uid,
-            n.npi,
-            n.organization_name,
-            n.first_name,
-            n.last_name,
-            n.primary_taxonomy_desc,
-            f.state,
-            f.year_month,
-            f.payer_slug,
-            f.reporting_entity_name,
-            f.code,
-            f.code_type,
-            f.negotiated_rate,
-            f.billing_class,
-            f.negotiated_type,
-            f.negotiation_arrangement
-        FROM read_parquet('""" + str(DATA_ROOT / "xrefs/xref_pg_member_tin.parquet") + """') xt
-        JOIN read_parquet('""" + str(DATA_ROOT / "xrefs/xref_pg_member_npi.parquet") + """') xn 
-            ON xt.pg_uid = xn.pg_uid
-        JOIN read_parquet('""" + str(DATA_ROOT / "dims/dim_npi.parquet") + """') n 
-            ON xn.npi = n.npi
-        JOIN read_parquet('""" + str(DATA_ROOT / "gold/fact_rate.parquet") + """') f 
-            ON xt.pg_uid = f.pg_uid
-        """)
+        try:
+            # TIN-based provider index for fast TIN lookups
+            self.conn.execute("""
+            CREATE OR REPLACE VIEW tin_provider_index AS
+            SELECT 
+                xt.tin_value,
+                xt.tin_type,
+                xt.pg_uid,
+                n.npi,
+                n.organization_name,
+                n.first_name,
+                n.last_name,
+                n.primary_taxonomy_desc,
+                f.state,
+                f.year_month,
+                f.payer_slug,
+                f.reporting_entity_name,
+                f.code,
+                f.code_type,
+                f.negotiated_rate,
+                f.billing_class,
+                f.negotiated_type,
+                f.negotiation_arrangement
+            FROM read_parquet('""" + str(DATA_ROOT / "xrefs/xref_pg_member_tin.parquet") + """') xt
+            JOIN read_parquet('""" + str(DATA_ROOT / "xrefs/xref_pg_member_npi.parquet") + """') xn 
+                ON xt.pg_uid = xn.pg_uid
+            JOIN read_parquet('""" + str(DATA_ROOT / "dims/dim_npi.parquet") + """') n 
+                ON xn.npi = n.npi
+            JOIN read_parquet('""" + str(DATA_ROOT / "gold/fact_rate.parquet") + """') f 
+                ON xt.pg_uid = f.pg_uid
+            """)
+        except Exception as e:
+            print(f"Error creating tin_provider_index: {e}")
         
         # Procedure code search index with categories
         self.conn.execute("""
@@ -533,135 +554,172 @@ class OptimizedMRFQueries:
                           limit: int = 100) -> List[Dict[str, Any]]:
         """Comprehensive multi-field search with all webapp filters"""
         
-        where_conditions = [f"state = '{state}'", f"year_month = '{year_month}'"]
+        try:
+            # Validate inputs to prevent crashes
+            if not state or not year_month:
+                return []
+            
+            # Limit result size to prevent memory issues
+            limit = min(limit, 1000)  # Cap at 1000 results
+            
+            where_conditions = ["f.state = ?", "f.year_month = ?"]
+            params = [state, year_month]
+            
+            # Helper function to build IN clause for lists (SQL injection safe)
+            def build_in_clause(field, values):
+                if not values:
+                    return None, []
+                if isinstance(values, list):
+                    placeholders = ','.join(['?' for _ in values])
+                    return f"{field} IN ({placeholders})", values
+                else:
+                    return f"{field} = ?", [values]
+            
+            # Helper function to build ILIKE clause for lists (SQL injection safe)
+            def build_ilike_clause(field, values):
+                if not values:
+                    return None, []
+                if isinstance(values, list):
+                    conditions = [f"{field} ILIKE ?" for _ in values]
+                    like_values = [f"%{v}%" for v in values]
+                    return f"({' OR '.join(conditions)})", like_values
+                else:
+                    return f"{field} ILIKE ?", [f"%{values}%"]
         
-        # Helper function to build IN clause for lists
-        def build_in_clause(field, values):
-            if not values:
-                return None
-            if isinstance(values, list):
-                quoted_values = [f"'{v}'" for v in values]
-                return f"{field} IN ({', '.join(quoted_values)})"
-            else:
-                return f"{field} = '{values}'"
+            # Provider filters
+            if primary_taxonomy_desc:
+                condition, new_params = build_in_clause("n.primary_taxonomy_desc", primary_taxonomy_desc)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            if organization_name:
+                condition, new_params = build_ilike_clause("n.organization_name", organization_name)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            if npi:
+                condition, new_params = build_in_clause("n.npi", npi)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            if enumeration_type:
+                condition, new_params = build_in_clause("n.enumeration_type", enumeration_type)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            
+            # Procedure filters
+            if billing_class:
+                condition, new_params = build_in_clause("f.billing_class", billing_class)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            if proc_set:
+                condition, new_params = build_in_clause("cc.proc_set", proc_set)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            if proc_class:
+                condition, new_params = build_in_clause("cc.proc_class", proc_class)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            if proc_group:
+                condition, new_params = build_in_clause("cc.proc_group", proc_group)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            if billing_code:
+                condition, new_params = build_in_clause("f.code", billing_code)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            
+            # TIN and payer filters
+            if tin_value:
+                condition, new_params = build_in_clause("xt.tin_value", tin_value)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            if payer:
+                condition, new_params = build_ilike_clause("f.reporting_entity_name", payer)
+                if condition:
+                    where_conditions.append(condition)
+                    params.extend(new_params)
+            
+            where_clause = " AND ".join(where_conditions)
         
-        # Helper function to build ILIKE clause for lists
-        def build_ilike_clause(field, values):
-            if not values:
-                return None
-            if isinstance(values, list):
-                conditions = [f"{field} ILIKE '%{v}%'" for v in values]
-                return f"({' OR '.join(conditions)})"
-            else:
-                return f"{field} ILIKE '%{values}%'"
-        
-        # Provider filters
-        if primary_taxonomy_desc:
-            condition = build_in_clause("primary_taxonomy_desc", primary_taxonomy_desc)
-            if condition:
-                where_conditions.append(condition)
-        if organization_name:
-            condition = build_ilike_clause("organization_name", organization_name)
-            if condition:
-                where_conditions.append(condition)
-        if npi:
-            condition = build_in_clause("npi", npi)
-            if condition:
-                where_conditions.append(condition)
-        if enumeration_type:
-            condition = build_in_clause("enumeration_type", enumeration_type)
-            if condition:
-                where_conditions.append(condition)
-        
-        # Procedure filters
-        if billing_class:
-            condition = build_in_clause("billing_class", billing_class)
-            if condition:
-                where_conditions.append(condition)
-        if proc_set:
-            condition = build_in_clause("proc_set", proc_set)
-            if condition:
-                where_conditions.append(condition)
-        if proc_class:
-            condition = build_in_clause("proc_class", proc_class)
-            if condition:
-                where_conditions.append(condition)
-        if proc_group:
-            condition = build_in_clause("proc_group", proc_group)
-            if condition:
-                where_conditions.append(condition)
-        if billing_code:
-            condition = build_in_clause("code", billing_code)
-            if condition:
-                where_conditions.append(condition)
-        
-        # TIN and payer filters
-        if tin_value:
-            condition = build_in_clause("tin_value", tin_value)
-            if condition:
-                where_conditions.append(condition)
-        if payer:
-            condition = build_ilike_clause("reporting_entity_name", payer)
-            if condition:
-                where_conditions.append(condition)
-        
-        where_clause = " AND ".join(where_conditions)
-        
-        query = f"""
-        SELECT DISTINCT
-            fact_uid,
-            npi,
-            organization_name,
-            first_name,
-            last_name,
-            primary_taxonomy_desc,
-            code,
-            code_type,
-            proc_class,
-            proc_group,
-            tin_value,
-            tin_type,
-            reporting_entity_name,
-            negotiated_rate,
-            billing_class,
-            negotiated_type,
-            negotiation_arrangement,
-            city,
-            provider_state,
-            postal_code
-        FROM comprehensive_search_index
-        WHERE {where_clause}
-        ORDER BY negotiated_rate DESC
-        LIMIT {limit}
-        """
-        
-        result = self.conn.execute(query).fetchall()
-        
-        return [
-            {
-                "fact_uid": row[0],
-                "npi": row[1],
-                "organization_name": row[2],
-                "first_name": row[3],
-                "last_name": row[4],
-                "primary_taxonomy_desc": row[5],
-                "code": row[6],
-                "code_type": row[7],
-                "proc_class": row[8],
-                "proc_group": row[9],
-                "tin_value": row[10],
-                "tin_type": row[11],
-                "reporting_entity_name": row[12],
-                "negotiated_rate": round(row[13], 2) if row[13] else 0,
-                "billing_class": row[14],
-                "negotiated_type": row[15],
-                "negotiation_arrangement": row[16],
-                "city": row[17],
-                "provider_state": row[18],
-                "postal_code": row[19]
-            }
-            for row in result
-        ]
+            # Query directly from tables instead of materialized view to save memory
+            query = f"""
+            SELECT DISTINCT
+                f.fact_uid,
+                n.npi,
+                n.organization_name,
+                n.first_name,
+                n.last_name,
+                n.primary_taxonomy_desc,
+                f.code,
+                f.code_type,
+                cc.proc_class,
+                cc.proc_group,
+                xt.tin_value,
+                xt.tin_type,
+                f.reporting_entity_name,
+                f.negotiated_rate,
+                f.billing_class,
+                f.negotiated_type,
+                f.negotiation_arrangement,
+                na.city,
+                na.state as provider_state,
+                na.postal_code
+            FROM read_parquet('{DATA_ROOT / "gold/fact_rate.parquet"}') f
+            LEFT JOIN read_parquet('{DATA_ROOT / "xrefs/xref_pg_member_npi.parquet"}') xn 
+                ON f.pg_uid = xn.pg_uid
+            LEFT JOIN read_parquet('{DATA_ROOT / "dims/dim_npi.parquet"}') n 
+                ON xn.npi = n.npi
+            LEFT JOIN read_parquet('{DATA_ROOT / "xrefs/xref_pg_member_tin.parquet"}') xt 
+                ON f.pg_uid = xt.pg_uid
+            LEFT JOIN read_parquet('{DATA_ROOT / "dims/dim_code_cat.parquet"}') cc 
+                ON f.code = cc.proc_cd
+            LEFT JOIN read_parquet('{DATA_ROOT / "dims/dim_npi_address.parquet"}') na 
+                ON n.npi = na.npi AND na.address_purpose = 'LOCATION'
+            WHERE {where_clause}
+            ORDER BY f.negotiated_rate DESC
+            LIMIT {limit}
+            """
+            
+            # Execute query with parameters to prevent SQL injection
+            result = self.conn.execute(query, params).fetchall()
+            
+            return [
+                {
+                    "fact_uid": row[0],
+                    "npi": row[1],
+                    "organization_name": row[2],
+                    "first_name": row[3],
+                    "last_name": row[4],
+                    "primary_taxonomy_desc": row[5],
+                    "code": row[6],
+                    "code_type": row[7],
+                    "proc_class": row[8],
+                    "proc_group": row[9],
+                    "tin_value": row[10],
+                    "tin_type": row[11],
+                    "reporting_entity_name": row[12],
+                    "negotiated_rate": round(row[13], 2) if row[13] else 0,
+                    "billing_class": row[14],
+                    "negotiated_type": row[15],
+                    "negotiation_arrangement": row[16],
+                    "city": row[17],
+                    "provider_state": row[18],
+                    "postal_code": row[19]
+                }
+                for row in result
+            ]
+            
+        except Exception as e:
+            print(f"Error in multi_field_search: {e}")
+            return []  # Return empty list instead of crashing
     
     def get_autocomplete_suggestions(self, field: str, query: str, state: str, year_month: str,
                                    limit: int = 20) -> List[str]:
@@ -669,21 +727,21 @@ class OptimizedMRFQueries:
         
         # Map field names to SQL fields and tables
         field_mapping = {
-            "primary_taxonomy_desc": ("primary_taxonomy_desc", "comprehensive_search_index"),
-            "organization_name": ("organization_name", "comprehensive_search_index"),
-            "npi": ("npi", "comprehensive_search_index"),
-            "billing_class": ("billing_class", "comprehensive_search_index"),
-            "proc_set": ("proc_set", "comprehensive_search_index"),
-            "proc_class": ("proc_class", "comprehensive_search_index"),
-            "proc_group": ("proc_group", "comprehensive_search_index"),
-            "billing_code": ("code", "comprehensive_search_index"),
-            "tin_value": ("tin_value", "comprehensive_search_index"),
-            "payer": ("reporting_entity_name", "comprehensive_search_index"),
+            "primary_taxonomy_desc": ("n.primary_taxonomy_desc", "comprehensive_search_index"),
+            "organization_name": ("n.organization_name", "comprehensive_search_index"),
+            "npi": ("n.npi", "comprehensive_search_index"),
+            "billing_class": ("f.billing_class", "comprehensive_search_index"),
+            "proc_set": ("cc.proc_set", "comprehensive_search_index"),
+            "proc_class": ("cc.proc_class", "comprehensive_search_index"),
+            "proc_group": ("cc.proc_group", "comprehensive_search_index"),
+            "billing_code": ("f.code", "comprehensive_search_index"),
+            "tin_value": ("xt.tin_value", "comprehensive_search_index"),
+            "payer": ("f.reporting_entity_name", "comprehensive_search_index"),
             # Legacy field names for backward compatibility
-            "organization": ("organization_name", "comprehensive_search_index"),
-            "taxonomy": ("primary_taxonomy_desc", "comprehensive_search_index"),
-            "procedure_category": ("proc_class", "comprehensive_search_index"),
-            "tin": ("tin_value", "comprehensive_search_index")
+            "organization": ("n.organization_name", "comprehensive_search_index"),
+            "taxonomy": ("n.primary_taxonomy_desc", "comprehensive_search_index"),
+            "procedure_category": ("cc.proc_class", "comprehensive_search_index"),
+            "tin": ("xt.tin_value", "comprehensive_search_index")
         }
         
         if field not in field_mapping:
@@ -691,10 +749,10 @@ class OptimizedMRFQueries:
         
         sql_field, table = field_mapping[field]
         
-        # Build the search query
+        # Build the search query with proper table prefixes
         where_conditions = [
-            f"state = '{state}'",
-            f"year_month = '{year_month}'",
+            f"f.state = '{state}'",
+            f"f.year_month = '{year_month}'",
             f"{sql_field} IS NOT NULL",
             f"{sql_field} != ''"
         ]
@@ -704,13 +762,31 @@ class OptimizedMRFQueries:
         
         where_clause = " AND ".join(where_conditions)
         
-        search_query = f"""
-        SELECT DISTINCT {sql_field}
-        FROM {table}
-        WHERE {where_clause}
-        ORDER BY {sql_field}
-        LIMIT {limit}
-        """
+        # Query directly from fact table with joins instead of materialized view
+        if table == "comprehensive_search_index":
+            search_query = f"""
+            SELECT DISTINCT {sql_field}
+            FROM read_parquet('{DATA_ROOT / "gold/fact_rate.parquet"}') f
+            LEFT JOIN read_parquet('{DATA_ROOT / "xrefs/xref_pg_member_npi.parquet"}') xn 
+                ON f.pg_uid = xn.pg_uid
+            LEFT JOIN read_parquet('{DATA_ROOT / "dims/dim_npi.parquet"}') n 
+                ON xn.npi = n.npi
+            LEFT JOIN read_parquet('{DATA_ROOT / "xrefs/xref_pg_member_tin.parquet"}') xt 
+                ON f.pg_uid = xt.pg_uid
+            LEFT JOIN read_parquet('{DATA_ROOT / "dims/dim_code_cat.parquet"}') cc 
+                ON f.code = cc.proc_cd
+            WHERE {where_clause}
+            ORDER BY {sql_field}
+            LIMIT {limit}
+            """
+        else:
+            search_query = f"""
+            SELECT DISTINCT {sql_field}
+            FROM {table}
+            WHERE {where_clause}
+            ORDER BY {sql_field}
+            LIMIT {limit}
+            """
         
         try:
             result = self.conn.execute(search_query).fetchall()

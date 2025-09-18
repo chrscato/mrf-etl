@@ -3,23 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MRF Dashboard - Fast Search</title>
+    <title>MRF Dashboard - Optimized</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
     <style>
-        .filter-section {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+        }
+
+        .header-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
             margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
-        .filter-section h5 {
-            color: #495057;
-            margin-bottom: 15px;
-            font-weight: 600;
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        }
+
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
         .search-btn {
             background: linear-gradient(45deg, #007bff, #0056b3);
             border: none;
@@ -30,16 +61,12 @@
             box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
             transition: all 0.3s ease;
         }
+
         .search-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 20px rgba(0, 123, 255, 0.4);
         }
-        .results-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            margin-top: 20px;
-        }
+
         .metric-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
@@ -48,50 +75,128 @@
             text-align: center;
             margin-bottom: 15px;
         }
+
         .metric-value {
             font-size: 2rem;
             font-weight: bold;
             margin-bottom: 5px;
         }
+
         .metric-label {
             font-size: 0.9rem;
             opacity: 0.9;
         }
+
         .table-container {
             max-height: 600px;
             overflow-y: auto;
+            border-radius: 8px;
         }
+
         .loading {
             display: none;
             text-align: center;
             padding: 40px;
         }
+
         .spinner-border {
             width: 3rem;
             height: 3rem;
         }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        /* Multi-select styling */
+        select[multiple] {
+            min-height: 120px;
+            padding: 8px;
+        }
+
+        select[multiple] option {
+            padding: 4px 8px;
+            margin: 2px 0;
+            border-radius: 4px;
+        }
+
+        select[multiple] option:checked {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        select[multiple] option:hover {
+            background-color: #e9ecef;
+        }
+
+        .filter-icon {
+            color: var(--primary-color);
+            margin-right: 8px;
+        }
+
+        .results-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-top: 20px;
+        }
+
+        .btn-outline-primary {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+
         .alert-custom {
             border-radius: 10px;
             border: none;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        .form-control:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+
+        .pagination-btn {
+            border-radius: 20px;
+            padding: 8px 16px;
+            margin: 0 5px;
         }
-        .form-select:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-        }
-        .header-gradient {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px 0;
-            margin-bottom: 30px;
-        }
-        .filter-icon {
-            color: #007bff;
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
             margin-right: 8px;
+        }
+
+        .status-healthy { background-color: var(--success-color); }
+        .status-warning { background-color: var(--warning-color); }
+        .status-error { background-color: var(--danger-color); }
+
+        .performance-badge {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .header-gradient h1 {
+                font-size: 1.5rem;
+            }
+            
+            .metric-value {
+                font-size: 1.5rem;
+            }
+            
+            .filter-section {
+                padding: 15px;
+            }
         }
     </style>
 </head>
@@ -101,8 +206,8 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-md-8">
-                    <h1><i class="fas fa-search"></i> MRF Dashboard - Fast Search</h1>
-                    <p class="mb-0">High-performance search using materialized views and indexing for instant results</p>
+                    <h1><i class="fas fa-search"></i> MRF Dashboard - Optimized</h1>
+                    <p class="mb-0">High-performance search with materialized views and indexing</p>
                 </div>
                 <div class="col-md-4 text-end">
                     <div class="d-flex justify-content-end gap-3">
@@ -124,14 +229,23 @@
     </div>
 
     <div class="container">
+        <!-- Status Indicator -->
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info alert-custom" id="statusAlert">
+                    <span class="status-indicator status-warning" id="statusIndicator"></span>
+                    <span id="statusText">Checking API connection...</span>
+                </div>
+            </div>
+        </div>
+
         <!-- Data Explorer Section -->
         <div class="row mb-4">
             <div class="col-12">
                 <div class="filter-section">
-                    <h5><i class="fas fa-compass filter-icon"></i> Data Explorer - Discover What's Available</h5>
-                    <p class="text-muted mb-3">Explore your data to understand what's available before searching. Select a category to see what data exists and how much.</p>
+                    <h5><i class="fas fa-compass filter-icon"></i> Data Explorer</h5>
+                    <p class="text-muted mb-3">Explore your data to understand what's available before searching.</p>
                     
-                    <!-- Category Selection -->
                     <div class="row mb-3">
                         <div class="col-md-8">
                             <label class="form-label">Explore Category</label>
@@ -154,7 +268,6 @@
                         </div>
                     </div>
                     
-                    <!-- Explore Button -->
                     <div class="text-center mb-3">
                         <button class="btn btn-outline-primary" onclick="exploreData()">
                             <i class="fas fa-search"></i> Explore Data
@@ -176,7 +289,6 @@
                     <div id="explorationResults" style="display: none;">
                         <h6 class="text-primary">Exploration Results</h6>
                         
-                        <!-- Loading indicator -->
                         <div id="explorationLoading" class="text-center" style="display: none;">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
@@ -184,7 +296,6 @@
                             <p class="mt-2">Loading exploration data...</p>
                         </div>
                         
-                        <!-- Results table -->
                         <div class="table-responsive">
                             <table class="table table-striped table-hover" id="explorationTable">
                                 <thead class="table-dark">
@@ -203,14 +314,13 @@
                             </table>
                         </div>
                         
-                        <!-- Pagination controls -->
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <div>
-                                <button class="btn btn-outline-secondary btn-sm" id="prevPageBtn" onclick="loadPreviousPage()" disabled>
+                                <button class="btn btn-outline-secondary btn-sm pagination-btn" id="prevPageBtn" onclick="loadPreviousPage()" disabled>
                                     <i class="fas fa-chevron-left"></i> Previous
                                 </button>
                                 <span class="mx-3" id="pageInfo">Page 1</span>
-                                <button class="btn btn-outline-secondary btn-sm" id="nextPageBtn" onclick="loadNextPage()" disabled>
+                                <button class="btn btn-outline-secondary btn-sm pagination-btn" id="nextPageBtn" onclick="loadNextPage()" disabled>
                                     Next <i class="fas fa-chevron-right"></i>
                                 </button>
                             </div>
@@ -218,35 +328,6 @@
                                 <small class="text-muted" id="resultCount">Showing 0 results</small>
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- Drill Down Results -->
-                    <div id="drillDownResults" style="display: none;">
-                        <h6 class="text-success">Drill Down Results</h6>
-                        <div class="alert alert-info">
-                            <strong>Drilling down from:</strong> <span id="drillSource"></span><br>
-                            <strong>Showing:</strong> <span id="drillTarget"></span>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover" id="drillDownTable">
-                                <thead class="table-success">
-                                    <tr>
-                                        <th>Value</th>
-                                        <th>Records</th>
-                                        <th>Providers</th>
-                                        <th>Procedures</th>
-                                        <th>Avg Rate</th>
-                                        <th>Rate Range</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="drillDownTableBody">
-                                    <!-- Drill down results will be populated here -->
-                                </tbody>
-                            </table>
-                        </div>
-                        <button class="btn btn-outline-secondary" onclick="clearDrillDown()">
-                            <i class="fas fa-arrow-left"></i> Back to Main Results
-                        </button>
                     </div>
                 </div>
             </div>
@@ -264,13 +345,13 @@
                             <h6 class="text-primary"><i class="fas fa-user-md"></i> Provider Filters</h6>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Primary Taxonomy Description</label>
+                            <label class="form-label">Primary Taxonomy</label>
                             <select class="form-select" id="primaryTaxonomyDesc" multiple>
                                 <option value="">Loading...</option>
                             </select>
                         </div>
                         <div class="col-md-3">
-                            <label class="form-label">Organization Name <small class="text-muted">(Searchable)</small></label>
+                            <label class="form-label">Organization Name</label>
                             <select class="form-select" id="organizationName" multiple>
                                 <option value="">Loading...</option>
                             </select>
@@ -413,102 +494,103 @@
         <div class="alert alert-danger alert-custom" id="errorMessage" style="display: none;">
             <i class="fas fa-exclamation-triangle"></i> <span id="errorText"></span>
         </div>
+
+        <!-- Performance Info -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="alert alert-success alert-custom">
+                    <h6><i class="fas fa-rocket"></i> Performance Features</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <span class="performance-badge">Materialized Views</span>
+                            <small class="d-block text-muted">Pre-computed joins for instant results</small>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="performance-badge">Indexed Queries</span>
+                            <small class="d-block text-muted">Optimized database indexes for fast lookups</small>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="performance-badge">Smart Caching</span>
+                            <small class="d-block text-muted">Results cached for 5 minutes to reduce load</small>
+                        </div>
+                        <div class="col-md-3">
+                            <span class="performance-badge">Single Process</span>
+                            <small class="d-block text-muted">No need for multiple terminals</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-        const API_BASE_URL = 'http://localhost:8000';
-        let filterCache = {};
-        let select2Instances = {};
+        const API_BASE_URL = window.location.origin;
+        let currentPage = 0;
+        let currentCategory = '';
+        let currentLimit = 25;
+        let hasMoreResults = false;
 
         // Initialize the dashboard
-        $(document).ready(function() {
-            initializeSelect2();
-            loadFilterOptions();
+        document.addEventListener('DOMContentLoaded', function() {
+            checkAPIHealth();
+            loadDropdownOptions();
             loadUserPreferences();
         });
 
-        function initializeSelect2() {
-            const selectFields = [
-                'primaryTaxonomyDesc', 'organizationName', 'npi', 'enumerationType',
-                'billingClass', 'procSet', 'procClass', 'procGroup',
-                'billingCode', 'tinValue', 'payer'
-            ];
-
-            selectFields.forEach(fieldId => {
-                const $select = $(`#${fieldId}`);
-                select2Instances[fieldId] = $select.select2({
-                    theme: 'bootstrap-5',
-                    placeholder: 'Select options...',
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $select.parent(),
-                    language: {
-                        noResults: function() {
-                            return "No results found";
-                        },
-                        searching: function() {
-                            return "Searching...";
-                        }
-                    }
-                });
-            });
+        async function checkAPIHealth() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/health`);
+                const data = await response.json();
+                
+                const statusIndicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                
+                if (data.status === 'healthy') {
+                    statusIndicator.className = 'status-indicator status-healthy';
+                    statusText.textContent = `✅ API Connected - ${data.data_stats.total_records.toLocaleString()} records available`;
+                } else {
+                    statusIndicator.className = 'status-indicator status-error';
+                    statusText.textContent = '❌ API Error - ' + data.message;
+                }
+            } catch (error) {
+                const statusIndicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                statusIndicator.className = 'status-indicator status-error';
+                statusText.textContent = '❌ Cannot connect to API - ' + error.message;
+            }
         }
 
-        function loadFilterOptions() {
-            const currentState = $('#stateSelect').val();
-            const currentYearMonth = $('#yearMonthSelect').val();
+        async function loadDropdownOptions() {
+            const state = document.getElementById('stateSelect').value;
+            const yearMonth = document.getElementById('yearMonthSelect').value;
             
-            // Load options for each filter field
-            const filterFields = [
+            // Load options for each dropdown field
+            const dropdownFields = [
                 'primary_taxonomy_desc', 'organization_name', 'npi',
                 'billing_class', 'proc_set', 'proc_class', 'proc_group',
                 'billing_code', 'tin_value', 'payer'
             ];
 
-            filterFields.forEach(field => {
-                loadFilterOptionsForField(field, currentState, currentYearMonth);
-            });
-        }
-
-        function loadFilterOptionsForField(field, state, yearMonth) {
-            const cacheKey = `${field}_${state}_${yearMonth}`;
-            
-            console.log(`Loading options for ${field} (${state}/${yearMonth})`);
-            
-            // Check cache first
-            if (filterCache[cacheKey]) {
-                console.log(`Using cached data for ${field}: ${filterCache[cacheKey].length} options`);
-                populateSelectField(field, filterCache[cacheKey]);
-                return;
+            for (const field of dropdownFields) {
+                await loadDropdownOptionsForField(field, state, yearMonth);
             }
-
-            // Fetch from API
-            const url = `${API_BASE_URL}/api/autocomplete/${field}?state=${state}&year_month=${yearMonth}&query=&limit=1000`;
-            console.log(`Fetching from: ${url}`);
-            
-            fetch(url)
-                .then(response => {
-                    console.log(`Response for ${field}:`, response.status);
-                    return response.json();
-                })
-                .then(data => {
-                    console.log(`Data for ${field}:`, data);
-                    if (data.suggestions) {
-                        filterCache[cacheKey] = data.suggestions;
-                        populateSelectField(field, data.suggestions);
-                    } else {
-                        console.warn(`No suggestions in response for ${field}`);
-                    }
-                })
-                .catch(error => {
-                    console.error(`Error loading ${field} options:`, error);
-                });
         }
 
-        function populateSelectField(field, options) {
+        async function loadDropdownOptionsForField(field, state, yearMonth) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/autocomplete/${field}?state=${state}&year_month=${yearMonth}&query=&limit=100`);
+                const data = await response.json();
+                
+                if (data.suggestions && data.suggestions.length > 0) {
+                    populateDropdown(field, data.suggestions);
+                }
+            } catch (error) {
+                console.error(`Error loading options for ${field}:`, error);
+            }
+        }
+
+        function populateDropdown(field, options) {
             // Map API field names to HTML element IDs
             const fieldMapping = {
                 'primary_taxonomy_desc': 'primaryTaxonomyDesc',
@@ -524,23 +606,23 @@
             };
             
             const fieldId = fieldMapping[field] || field;
-            const $select = $(`#${fieldId}`);
+            const select = document.getElementById(fieldId);
             
-            console.log(`Populating ${field} -> ${fieldId} with ${options.length} options`);
-            
-            // Clear existing options
-            $select.empty();
-            
-            // Add options
-            options.forEach(option => {
-                $select.append(new Option(option, option));
-            });
-            
-            // Trigger Select2 update
-            $select.trigger('change');
+            if (select) {
+                // Clear existing options
+                select.innerHTML = '';
+                
+                // Add options
+                options.forEach(option => {
+                    const optionElement = document.createElement('option');
+                    optionElement.value = option;
+                    optionElement.textContent = option;
+                    select.appendChild(optionElement);
+                });
+            }
         }
 
-        function performSearch() {
+        async function performSearch() {
             // Show loading indicator
             document.getElementById('loadingIndicator').style.display = 'block';
             document.getElementById('resultsSection').style.display = 'none';
@@ -562,34 +644,38 @@
             ];
 
             filters.forEach(filterId => {
-                const values = $(`#${filterId}`).val();
-                if (values && values.length > 0) {
-                    // Convert to API parameter names
-                    const apiParam = filterId.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
-                    searchParams[apiParam] = values.join(',');
+                const select = document.getElementById(filterId);
+                if (select) {
+                    const selectedOptions = Array.from(select.selectedOptions)
+                        .map(option => option.value)
+                        .filter(value => value && value.trim() !== '');
+                    
+                    if (selectedOptions.length > 0) {
+                        const apiParam = filterId.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '');
+                        searchParams[apiParam] = selectedOptions.join(',');
+                    }
                 }
             });
 
             // Save user preferences
             saveUserPreferences();
 
-            // Make API call
-            fetch(`${API_BASE_URL}/api/search/multi-field?${new URLSearchParams(searchParams)}`)
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('loadingIndicator').style.display = 'none';
-                    
-                    if (data.results && data.results.length > 0) {
-                        displayResults(data);
-                    } else {
-                        document.getElementById('noResultsMessage').style.display = 'block';
-                    }
-                })
-                .catch(error => {
-                    document.getElementById('loadingIndicator').style.display = 'none';
-                    document.getElementById('errorText').textContent = `Error: ${error.message}`;
-                    document.getElementById('errorMessage').style.display = 'block';
-                });
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/search/multi-field?${new URLSearchParams(searchParams)}`);
+                const data = await response.json();
+                
+                document.getElementById('loadingIndicator').style.display = 'none';
+                
+                if (data.results && data.results.length > 0) {
+                    displayResults(data);
+                } else {
+                    document.getElementById('noResultsMessage').style.display = 'block';
+                }
+            } catch (error) {
+                document.getElementById('loadingIndicator').style.display = 'none';
+                document.getElementById('errorText').textContent = `Error: ${error.message}`;
+                document.getElementById('errorMessage').style.display = 'block';
+            }
         }
 
         function displayResults(data) {
@@ -662,9 +748,21 @@
         }
 
         function clearFilters() {
-            // Clear all Select2 instances
-            Object.values(select2Instances).forEach(select2 => {
-                select2.val(null).trigger('change');
+            // Clear all form fields
+            const filters = [
+                'primaryTaxonomyDesc', 'organizationName', 'npi', 'enumerationType',
+                'billingClass', 'procSet', 'procClass', 'procGroup',
+                'billingCode', 'tinValue', 'payer'
+            ];
+
+            filters.forEach(filterId => {
+                const select = document.getElementById(filterId);
+                if (select) {
+                    // Clear all selections
+                    Array.from(select.options).forEach(option => {
+                        option.selected = false;
+                    });
+                }
             });
             
             // Clear results
@@ -678,8 +776,8 @@
 
         function saveUserPreferences() {
             const preferences = {
-                state: $('#stateSelect').val(),
-                yearMonth: $('#yearMonthSelect').val(),
+                state: document.getElementById('stateSelect').value,
+                yearMonth: document.getElementById('yearMonthSelect').value,
                 filters: {}
             };
 
@@ -691,9 +789,15 @@
             ];
 
             filterFields.forEach(fieldId => {
-                const values = $(`#${fieldId}`).val();
-                if (values && values.length > 0) {
-                    preferences.filters[fieldId] = values;
+                const select = document.getElementById(fieldId);
+                if (select) {
+                    const selectedValues = Array.from(select.selectedOptions)
+                        .map(option => option.value)
+                        .filter(value => value && value.trim() !== '');
+                    
+                    if (selectedValues.length > 0) {
+                        preferences.filters[fieldId] = selectedValues;
+                    }
                 }
             });
 
@@ -708,47 +812,48 @@
                     
                     // Restore state and year/month
                     if (preferences.state) {
-                        $('#stateSelect').val(preferences.state);
+                        document.getElementById('stateSelect').value = preferences.state;
                     }
                     if (preferences.yearMonth) {
-                        $('#yearMonthSelect').val(preferences.yearMonth);
+                        document.getElementById('yearMonthSelect').value = preferences.yearMonth;
                     }
 
                     // Restore filter selections after options are loaded
                     setTimeout(() => {
                         if (preferences.filters) {
                             Object.entries(preferences.filters).forEach(([fieldId, values]) => {
-                                $(`#${fieldId}`).val(values).trigger('change');
+                                const select = document.getElementById(fieldId);
+                                if (select && Array.isArray(values)) {
+                                    values.forEach(value => {
+                                        const option = Array.from(select.options).find(opt => opt.value === value);
+                                        if (option) {
+                                            option.selected = true;
+                                        }
+                                    });
+                                }
                             });
                         }
-                    }, 1000);
+                    }, 1000); // Wait for dropdowns to be populated
                 } catch (e) {
                     console.error('Error loading preferences:', e);
                 }
             }
         }
 
-        // Handle state/year-month changes
-        $('#stateSelect, #yearMonthSelect').on('change', function() {
-            loadFilterOptions();
-        });
-
-        function testAPI() {
+        async function testAPI() {
             console.log("🧪 Testing API...");
-            const state = $('#stateSelect').val();
-            const yearMonth = $('#yearMonthSelect').val();
+            const state = document.getElementById('stateSelect').value;
+            const yearMonth = document.getElementById('yearMonthSelect').value;
             
-            // Test proc_class which we know works
-            fetch(`${API_BASE_URL}/api/autocomplete/proc_class?state=${state}&year_month=${yearMonth}&query=&limit=5`)
-                .then(response => response.json())
-                .then(data => {
-                    console.log("✅ API Test Result:", data);
-                    alert(`API Test: Found ${data.suggestions.length} procedure classes. Check console for details.`);
-                })
-                .catch(error => {
-                    console.error("❌ API Test Error:", error);
-                    alert(`API Test Failed: ${error.message}`);
-                });
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/health`);
+                const data = await response.json();
+                console.log("✅ API Test Result:", data);
+                alert(`API Test: ${data.status} - ${data.data_stats.total_records.toLocaleString()} records available`);
+            } catch (error) {
+                console.error("❌ API Test Error:", error);
+                alert(`API Test Failed: ${error.message}`);
+            }
         }
 
         // Allow Enter key to trigger search
@@ -758,17 +863,20 @@
             }
         });
 
+        // Handle state/year-month changes to reload dropdown options
+        document.getElementById('stateSelect').addEventListener('change', function() {
+            loadDropdownOptions();
+        });
+
+        document.getElementById('yearMonthSelect').addEventListener('change', function() {
+            loadDropdownOptions();
+        });
+
         // =============================================================================
         // DATA EXPLORATION FUNCTIONS
         // =============================================================================
 
-        // Global variables for pagination
-        let currentPage = 0;
-        let currentCategory = '';
-        let currentLimit = 25;
-        let hasMoreResults = false;
-
-        function exploreData() {
+        async function exploreData() {
             const category = document.getElementById('exploreCategory').value;
             const limit = parseInt(document.getElementById('exploreLimit').value);
             
@@ -788,32 +896,33 @@
             const state = document.getElementById('stateSelect').value;
             const yearMonth = document.getElementById('yearMonthSelect').value;
             
-            // First, get category statistics (lightweight)
-            fetch(`${API_BASE_URL}/api/explore/category-stats?state=${state}&year_month=${yearMonth}`)
-                .then(response => response.json())
-                .then(data => {
-                    displayCategoryStats(data.category_statistics);
-                    
-                    // Then get exploration data with pagination
-                    return loadExplorationPage(state, yearMonth, category, limit, 0);
-                })
-                .catch(error => {
-                    console.error('Error exploring data:', error);
-                    alert('Error exploring data: ' + error.message);
-                })
-                .finally(() => {
-                    hideExplorationLoading();
-                });
+            try {
+                // First, get category statistics
+                const statsResponse = await fetch(`${API_BASE_URL}/api/explore/category-stats?state=${state}&year_month=${yearMonth}`);
+                const statsData = await statsResponse.json();
+                displayCategoryStats(statsData.category_statistics);
+                
+                // Then get exploration data
+                await loadExplorationPage(state, yearMonth, category, limit, 0);
+            } catch (error) {
+                console.error('Error exploring data:', error);
+                alert('Error exploring data: ' + error.message);
+            } finally {
+                hideExplorationLoading();
+            }
         }
 
-        function loadExplorationPage(state, yearMonth, category, limit, offset) {
-            return fetch(`${API_BASE_URL}/api/explore/data-availability?state=${state}&year_month=${yearMonth}&category=${category}&limit=${limit}&offset=${offset}`)
-                .then(response => response.json())
-                .then(data => {
-                    hasMoreResults = data.has_more;
-                    displayExplorationResults(data);
-                    updatePaginationControls();
-                });
+        async function loadExplorationPage(state, yearMonth, category, limit, offset) {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/explore/data-availability?state=${state}&year_month=${yearMonth}&category=${category}&limit=${limit}&offset=${offset}`);
+                const data = await response.json();
+                hasMoreResults = data.has_more;
+                displayExplorationResults(data);
+                updatePaginationControls();
+            } catch (error) {
+                console.error('Error loading exploration page:', error);
+                throw error;
+            }
         }
 
         function loadNextPage() {
@@ -864,7 +973,6 @@
             const statsRow = document.getElementById('statsRow');
             const categoryStats = document.getElementById('categoryStats');
             
-            // Show the most relevant categories
             const relevantCategories = ['payer', 'organization', 'taxonomy', 'procedure_set', 'procedure_class'];
             
             statsRow.innerHTML = relevantCategories.map(cat => {
@@ -888,12 +996,9 @@
             const explorationResults = document.getElementById('explorationResults');
             const resultCount = document.getElementById('resultCount');
             
-            // Clear existing results
             tbody.innerHTML = '';
             
-            // Build table rows efficiently
             const rows = results.map(result => {
-                const escapedValue = result.value.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                 return `
                     <tr>
                         <td><strong>${result.value}</strong></td>
@@ -902,7 +1007,7 @@
                         <td>${result.unique_procedures.toLocaleString()}</td>
                         <td>$${result.avg_rate.toFixed(2)}</td>
                         <td>
-                            <button class="btn btn-sm btn-outline-primary" onclick="drillDown('${data.category}', '${escapedValue}')">
+                            <button class="btn btn-sm btn-outline-primary" onclick="drillDown('${data.category}', '${result.value.replace(/'/g, "\\'")}')">
                                 <i class="fas fa-search-plus"></i> Drill Down
                             </button>
                         </td>
@@ -911,89 +1016,20 @@
             }).join('');
             
             tbody.innerHTML = rows;
-            
-            // Update result count
             resultCount.textContent = `Showing ${results.length} results`;
-            
             explorationResults.style.display = 'block';
         }
 
         function drillDown(sourceCategory, selectedValue) {
-            const state = document.getElementById('stateSelect').value;
-            const yearMonth = document.getElementById('yearMonthSelect').value;
-            
-            // Show drill down options
-            const drillCategories = {
-                'payer': ['organization', 'taxonomy', 'procedure_set', 'procedure_class'],
-                'organization': ['payer', 'taxonomy', 'procedure_set', 'procedure_class'],
-                'taxonomy': ['payer', 'organization', 'procedure_set', 'procedure_class'],
-                'procedure_set': ['payer', 'organization', 'taxonomy', 'procedure_class'],
-                'procedure_class': ['payer', 'organization', 'taxonomy', 'procedure_set']
-            };
-            
-            const availableDrills = drillCategories[sourceCategory] || [];
-            
-            if (availableDrills.length === 0) {
-                alert('No drill down options available for this category.');
-                return;
-            }
-            
-            // For now, let's drill down to the first available category
-            // In a more advanced version, you could show a modal to let users choose
-            const drillCategory = availableDrills[0];
-            
-            fetch(`${API_BASE_URL}/api/explore/drill-down?state=${state}&year_month=${yearMonth}&category=${sourceCategory}&selected_value=${encodeURIComponent(selectedValue)}&drill_category=${drillCategory}&limit=25`)
-                .then(response => response.json())
-                .then(data => {
-                    displayDrillDownResults(data, sourceCategory, selectedValue, drillCategory);
-                })
-                .catch(error => {
-                    console.error('Error drilling down:', error);
-                    alert('Error drilling down: ' + error.message);
-                });
-        }
-
-        function displayDrillDownResults(data, sourceCategory, selectedValue, drillCategory) {
-            const tbody = document.getElementById('drillDownTableBody');
-            const drillDownResults = document.getElementById('drillDownResults');
-            const drillSource = document.getElementById('drillSource');
-            const drillTarget = document.getElementById('drillTarget');
-            
-            // Update headers
-            drillSource.textContent = `${sourceCategory}: ${selectedValue}`;
-            drillTarget.textContent = drillCategory;
-            
-            tbody.innerHTML = '';
-            
-            data.results.forEach(result => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td><strong>${result.value}</strong></td>
-                    <td>${result.record_count.toLocaleString()}</td>
-                    <td>${result.unique_providers.toLocaleString()}</td>
-                    <td>${result.unique_procedures.toLocaleString()}</td>
-                    <td>$${result.avg_rate.toFixed(2)}</td>
-                    <td>$${result.min_rate.toFixed(2)} - $${result.max_rate.toFixed(2)}</td>
-                `;
-                tbody.appendChild(row);
-            });
-            
-            // Hide main results and show drill down
-            document.getElementById('explorationResults').style.display = 'none';
-            drillDownResults.style.display = 'block';
+            // For now, just show an alert - in a full implementation, this would open a modal or new section
+            alert(`Drill down from ${sourceCategory}: ${selectedValue}\n\nThis feature would show related data in other categories.`);
         }
 
         function clearExploration() {
             document.getElementById('exploreCategory').value = '';
-            document.getElementById('exploreLimit').value = '50';
+            document.getElementById('exploreLimit').value = '25';
             document.getElementById('categoryStats').style.display = 'none';
             document.getElementById('explorationResults').style.display = 'none';
-            document.getElementById('drillDownResults').style.display = 'none';
-        }
-
-        function clearDrillDown() {
-            document.getElementById('drillDownResults').style.display = 'none';
-            document.getElementById('explorationResults').style.display = 'block';
         }
     </script>
 </body>
